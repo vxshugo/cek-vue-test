@@ -8,48 +8,37 @@ const apiClient = axios.create({
 	},
 })
 
-export const fetchCategories = async () => {
+// Универсальная функция для обработки запросов
+async function handleRequest(request, isCategoryList = false) {
 	try {
-		const response = await apiClient.get(`/category-list`)
-		return response.data // Убедись, что API возвращает массив категорий
+		const response = await request()
+		// Возвращаем либо список категорий, либо продукты в зависимости от типа запроса
+		return isCategoryList ? response.data : response.data.products
 	} catch (error) {
-		console.error('Error fetching categories:', error)
+		console.error('API request error:', error)
 		throw error
 	}
 }
-export const fetchProducts = async () => {
-	try {
-		const response = await apiClient.get()
-		return response.data.products
-	} catch (error) {
-		console.error('Error fetching products:', error)
-		throw error
-	}
+
+export const fetchCategories = () => {
+	return handleRequest(() => apiClient.get('/category-list'), true)
 }
-export const fetchProductsByCategory = async category => {
-	try {
-		const response = await apiClient.get(`${BASE_URL}/category/${category}`)
-		return response.data.products // Убедись, что возвращается массив продуктов
-	} catch (error) {
-		console.error('Error fetching products by category:', error)
-		throw error
-	}
+
+export const fetchProducts = () => {
+	return handleRequest(() => apiClient.get('/'))
 }
-// Поиск продуктов
-export const fetchProductsBySearch = async query => {
-	try {
-		const response = await apiClient.get(
-			`/search?q=${encodeURIComponent(query)}`
-		)
-		return response.data.products
-	} catch (error) {
-		console.error('Error searching products:', error)
-		throw error
-	}
+
+export const fetchProductsByCategory = category => {
+	return handleRequest(() => apiClient.get(`/category/${category}`))
 }
+
+export const fetchProductsBySearch = query => {
+	return handleRequest(() => apiClient.get('/search', { params: { q: query } }))
+}
+
 export default {
 	fetchCategories,
-	fetchProductsByCategory,
 	fetchProducts,
+	fetchProductsByCategory,
 	fetchProductsBySearch,
 }

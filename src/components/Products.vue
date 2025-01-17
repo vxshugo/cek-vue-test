@@ -1,75 +1,35 @@
 <script setup lang="ts">
-import {
-	Select,
-	SelectContent,
-	SelectGroup,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from '@/ui/select'
 import { ref, onMounted, watch } from 'vue'
 import {
 	fetchCategories,
 	fetchProducts,
+	fetchProductsByCategory,
 	fetchProductsBySearch,
 } from '@/services/apiService'
-import { Input } from '@/ui/Input'
-import { Search } from 'lucide-vue-next'
+import { debounce } from '@/utils/debounce'
+import { useProductStore } from '@/composables/useProductStore'
+import SearchInput from '@/components/SearchInput.vue'
+import CategorySelect from '@/components/CategorySelect.vue'
+import Loader from '@/components/Loader.vue'
+import ErrorMessage from '@/components/ErrorMessage.vue'
 
-const categories = ref([])
-const selectedCategory = ref('')
-const products = ref([])
-const searchQuery = ref('')
-const isLoading = ref(false)
-const errorMessage = ref('')
-let searchTimeout = null
+const {
+	categories,
+	selectedCategory,
+	products,
+	searchQuery,
+	isLoading,
+	errorMessage,
+	loadCategoriesAndProducts,
+	loadProductsByCategory,
+	performSearch,
+} = useProductStore()
 
-// Загрузка категорий и рандомных товаров
-onMounted(async () => {
-	isLoading.value = true
-	try {
-		// Загружаем категории
-		categories.value = await fetchCategories()
-		// Загружаем рандомные товары
-		const allProducts = await fetchProducts()
-		products.value = allProducts.sort(() => 0.5 - Math.random()).slice(0, 10)
-	} catch (error) {
-		errorMessage.value = 'Failed to load categories or products.'
-		console.error(error)
-	} finally {
-		isLoading.value = false
-	}
-})
-
-// Функция поиска
-const performSearch = async () => {
-	if (searchQuery.value.trim().length === 0) {
-		// Если строка поиска пустая, показываем рандомные товары
-		const allProducts = await fetchProducts()
-		products.value = allProducts.sort(() => 0.5 - Math.random()).slice(0, 10)
-		errorMessage.value = ''
-		return
-	}
-	isLoading.value = true
-	try {
-		const searchResults = await fetchProductsBySearch(searchQuery.value)
-		products.value = searchResults
-		errorMessage.value = products.value.length === 0 ? 'No products found.' : ''
-	} catch (error) {
-		errorMessage.value = 'Error performing search.'
-		console.error(error)
-	} finally {
-		isLoading.value = false
-	}
-}
-
-// Отслеживание строки поиска с задержкой
-watch(searchQuery, () => {
-	clearTimeout(searchTimeout)
-	searchTimeout = setTimeout(() => {
-		performSearch()
-	}, 500) // Задержка в 500 мс
-})
+onMounted(loadCategoriesAndProducts)
+console.log(products)
+// Здесь используем debounce из utils и watch из Vue
+watch(selectedCategory, loadProductsByCategory, { immediate: true })
+watch(searchQuery, debounce(performSearch, 500), { immediate: false })
 </script>
 
 <template>
@@ -79,42 +39,11 @@ watch(searchQuery, () => {
 				Products by DummyJSON API
 			</h2>
 			<div class="mb-4 flex justify-between">
-				<div class="relative w-full max-w-sm items-center">
-					<Input
-						type="text"
-						v-model="searchQuery"
-						placeholder="Search products..."
-						class="pl-10"
-					/>
-					<span
-						class="absolute start-0 inset-y-0 flex items-center justify-center px-2"
-					>
-						<Search class="size-6 text-muted-foreground" />
-					</span>
-				</div>
-				<Select v-model="selectedCategory">
-					<SelectTrigger class="w-[180px]">
-						<SelectValue placeholder="Select a category" />
-					</SelectTrigger>
-					<SelectContent>
-						<SelectGroup>
-							<SelectItem
-								v-for="category in categories"
-								:key="category"
-								:value="category"
-							>
-								{{ category }}
-							</SelectItem>
-						</SelectGroup>
-					</SelectContent>
-				</Select>
+				<SearchInput v-model="searchQuery" />
+				<CategorySelect :categories="categories" v-model="selectedCategory" />
 			</div>
-			<div v-if="isLoading" class="flex justify-center items-center">
-				<div class="loader"></div>
-			</div>
-			<div v-if="errorMessage" class="text-red-500 text-center">
-				{{ errorMessage }}
-			</div>
+			<Loader v-if="isLoading" />
+			<ErrorMessage :message="errorMessage" />
 			<div
 				class="mt-6 grid grid-cols-1 gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-4 xl:gap-x-8"
 			>
