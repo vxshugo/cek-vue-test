@@ -1,13 +1,7 @@
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue'
-import {
-	fetchCategories,
-	fetchProducts,
-	fetchProductsByCategory,
-	fetchProductsBySearch,
-} from '@/services/apiService'
-import { debounce } from '@/utils/debounce'
+import { onMounted, watch, computed } from 'vue'
 import { useProductStore } from '@/composables/useProductStore'
+import { debounce } from '@/utils/debounce'
 import SearchInput from '@/components/SearchInput.vue'
 import CategorySelect from '@/components/CategorySelect.vue'
 import Loader from '@/components/Loader.vue'
@@ -20,16 +14,41 @@ const {
 	searchQuery,
 	isLoading,
 	errorMessage,
-	loadCategoriesAndProducts,
+	loadCategories,
+	loadProducts,
 	loadProductsByCategory,
 	performSearch,
+	loadMoreProducts,
 } = useProductStore()
 
-onMounted(loadCategoriesAndProducts)
-console.log(products)
-// Здесь используем debounce из utils и watch из Vue
-watch(selectedCategory, loadProductsByCategory, { immediate: true })
-watch(searchQuery, debounce(performSearch, 500), { immediate: false })
+onMounted(() => {
+	loadProducts() // Загрузка продуктов
+	if (categories.value.length === 0) {
+		loadCategories() // Загрузка категорий, если они не загружены
+	}
+})
+
+// Обеспечиваем вызов loadProductsByCategory только когда категория выбрана
+watch(
+	selectedCategory,
+	newVal => {
+		if (newVal) {
+			loadProductsByCategory(newVal)
+		}
+	},
+	{ immediate: false }
+)
+// Дебаунс для поиска с учетом категории
+watch(
+	searchQuery,
+	debounce(() => {
+		performSearch({
+			query: searchQuery.value,
+			categoryId: selectedCategory.value,
+		})
+	}, 500),
+	{ immediate: false }
+)
 </script>
 
 <template>
@@ -74,6 +93,10 @@ watch(searchQuery, debounce(performSearch, 500), { immediate: false })
 					</div>
 				</div>
 			</div>
+
+			<button @click="loadMoreProducts" class="mt-4" v-if="!isLoading">
+				Загрузить еще
+			</button>
 		</div>
 	</div>
 </template>

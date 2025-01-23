@@ -2,7 +2,7 @@
 import axios from 'axios'
 
 const apiClient = axios.create({
-	baseURL: 'https://dummyjson.com/products',
+	baseURL: 'https://api.escuelajs.co/api/v1/',
 	headers: {
 		'Content-Type': 'Application/json',
 	},
@@ -12,8 +12,8 @@ const apiClient = axios.create({
 async function handleRequest(request, isCategoryList = false) {
 	try {
 		const response = await request()
-		// Возвращаем либо список категорий, либо продукты в зависимости от типа запроса
-		return isCategoryList ? response.data : response.data.products
+		// Возвращаем данные в зависимости от типа запроса
+		return response.data
 	} catch (error) {
 		console.error('API request error:', error)
 		throw error
@@ -21,19 +21,32 @@ async function handleRequest(request, isCategoryList = false) {
 }
 
 export const fetchCategories = () => {
-	return handleRequest(() => apiClient.get('/category-list'), true)
+	return handleRequest(() => apiClient.get('/categories'), true)
 }
 
-export const fetchProducts = () => {
-	return handleRequest(() => apiClient.get('/'))
+export const fetchProducts = ({ offset = 0, limit = 10 }) => {
+	return handleRequest(() =>
+		apiClient.get('/products', { params: { offset, limit } })
+	)
 }
 
-export const fetchProductsByCategory = category => {
-	return handleRequest(() => apiClient.get(`/category/${category}`))
+export const fetchProductsByCategory = categoryId => {
+	return handleRequest(() =>
+		apiClient.get(`/categories/${categoryId}/products`)
+	)
 }
 
-export const fetchProductsBySearch = query => {
-	return handleRequest(() => apiClient.get('/search', { params: { q: query } }))
+export const fetchProductsBySearch = ({
+	title,
+	categoryId = null,
+	offset = 0,
+	limit = 10,
+}) => {
+	const params = { title, offset, limit } // Используем title напрямую
+	if (categoryId) {
+		params.categoryId = categoryId
+	}
+	return handleRequest(() => apiClient.get('/products', { params }))
 }
 
 export default {

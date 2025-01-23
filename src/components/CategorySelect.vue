@@ -7,10 +7,10 @@
 			<SelectGroup>
 				<SelectItem
 					v-for="category in categories"
-					:key="category"
-					:value="category"
+					:key="category.id"
+					:value="`${category.id}`"
 				>
-					{{ category }}
+					{{ category.name }}
 				</SelectItem>
 			</SelectGroup>
 		</SelectContent>

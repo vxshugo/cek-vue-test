@@ -14,56 +14,82 @@ export function useProductStore() {
 	const searchQuery = ref('')
 	const isLoading = ref(false)
 	const errorMessage = ref('')
+	const limit = 20 // Количество продуктов на страницу
+	const offset = ref(0) // Начальное смещение для пагинации
 
-	async function loadCategoriesAndProducts() {
+	// Загрузка всех продуктов с пагинацией
+	async function loadProducts() {
+		isLoading.value = true
+		try {
+			const additionalProducts = await fetchProducts({
+				offset: offset.value,
+				limit,
+			})
+			products.value = [...products.value, ...additionalProducts]
+			offset.value += additionalProducts.length // Обновляем offset после каждой загрузки
+		} catch (error) {
+			errorMessage.value = 'Failed to load products.'
+			console.error(error)
+		} finally {
+			isLoading.value = false
+		}
+	}
+	// Загрузка только категорий
+	async function loadCategories() {
 		isLoading.value = true
 		try {
 			categories.value = await fetchCategories()
-			const allProducts = await fetchProducts()
-			products.value = allProducts
 		} catch (error) {
-			errorMessage.value = 'Failed to load categories or products.'
+			errorMessage.value = 'Failed to load categories.'
 			console.error(error)
 		} finally {
 			isLoading.value = false
 		}
 	}
 
-	async function loadProductsByCategory() {
-		if (!selectedCategory.value) {
-			const allProducts = await fetchProducts()
-			products.value = allProducts
-			errorMessage.value = ''
-			return
-		}
+	async function loadProductsByCategory(categoryId) {
 		isLoading.value = true
 		try {
-			products.value = await fetchProductsByCategory(selectedCategory.value)
-			errorMessage.value =
-				products.value.length === 0 ? 'No products found in this category.' : ''
+			const response = await fetchProductsByCategory(categoryId)
+			console.log('Response data:', response) // Логирование ответа сервера
+			products.value = response
+			if (products.value.length === 0) {
+				throw new Error('No products found')
+			}
 		} catch (error) {
-			errorMessage.value = 'Error loading products by category.'
-			console.error(error)
+			errorMessage.value =
+				error.message || 'No products found in this category.'
+			console.error('Load Products By Category Error:', error)
 		} finally {
 			isLoading.value = false
 		}
 	}
 
 	async function performSearch() {
-		isLoading.value = true
-		errorMessage.value = ''
+		isLoading.value = true;
+		errorMessage.value = '';
+		// Сброс offset при каждом новом поиске
+		offset.value = 0;
 
 		try {
-			// Запрашиваем продукты по поисковому запросу без учета категории
-			const searchResults = await fetchProductsBySearch(searchQuery.value)
-			products.value = searchResults
-			errorMessage.value =
-				products.value.length === 0 ? 'No products found.' : ''
+			const queryParams = {
+				title: searchQuery.value,
+				categoryId: selectedCategory.value ? selectedCategory.value : undefined,
+				offset: offset.value,
+				limit,
+			};
+			const results = await fetchProductsBySearch(queryParams);
+			products.value = results;
+			// Увеличиваем offset только если были получены результаты
+			if (results.length > 0) {
+				offset.value += results.length;
+			}
+			errorMessage.value = results.length === 0 ? 'No products found.' : '';
 		} catch (error) {
-			errorMessage.value = 'Error performing search.'
-			console.error(error)
+			errorMessage.value = 'Error performing search.';
+			console.error(error);
 		} finally {
-			isLoading.value = false
+			isLoading.value = false;
 		}
 	}
 
@@ -74,7 +100,8 @@ export function useProductStore() {
 		searchQuery,
 		isLoading,
 		errorMessage,
-		loadCategoriesAndProducts,
+		loadProducts,
+		loadCategories,
 		loadProductsByCategory,
 		performSearch,
 	}
