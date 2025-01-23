@@ -24,10 +24,14 @@ export const fetchCategories = () => {
 	return handleRequest(() => apiClient.get('/categories'), true)
 }
 
-export const fetchProducts = ({ offset = 0, limit = 10 }) => {
-	return handleRequest(() =>
-		apiClient.get('/products', { params: { offset, limit } })
-	)
+export const fetchProducts = ({ title = null, categoryId = null, offset = 0, limit = 20 }) => {
+	const params = {
+		...(title && { title }),
+		...(categoryId && { categoryId }),
+		offset,
+		limit,
+	};
+	return handleRequest(() => apiClient.get('/products', { params }));
 }
 
 export const fetchProductsByCategory = categoryId => {
@@ -36,22 +40,10 @@ export const fetchProductsByCategory = categoryId => {
 	)
 }
 
-export const fetchProductsBySearch = ({
-	title,
-	categoryId = null,
-	offset = 0,
-	limit = 10,
-}) => {
-	const params = { title, offset, limit } // Используем title напрямую
-	if (categoryId) {
-		params.categoryId = categoryId
-	}
-	return handleRequest(() => apiClient.get('/products', { params }))
-}
+
 
 export default {
 	fetchCategories,
 	fetchProducts,
-	fetchProductsByCategory,
-	fetchProductsBySearch,
+	fetchProductsByCategory
 }
