@@ -28,11 +28,17 @@ export function useProductStore() {
 				limit,
 			};
 			const response = await fetchProducts(params);
-			products.value = resetOffset ? response : [...products.value, ...response];
 			if (response.length) {
+				products.value = resetOffset ? response : [...products.value, ...response];
 				offset.value += response.length;
-			} else if (resetOffset) {
-				throw new Error('No products found');
+			} else {
+				if (resetOffset) {
+					// Нет товаров при начальной загрузке с установленными фильтрами
+					throw new Error('No products found');
+				} else {
+					// Нет дополнительных товаров при попытке подгрузки
+					throw new Error('No more products found with the current filters');
+				}
 			}
 		} catch (error) {
 			errorMessage.value = error.message || 'Failed to load products.';
@@ -41,6 +47,7 @@ export function useProductStore() {
 			isLoading.value = false;
 		}
 	}
+
 
 	// Загрузка только категорий
 	async function loadCategories() {

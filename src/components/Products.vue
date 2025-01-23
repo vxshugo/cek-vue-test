@@ -7,6 +7,7 @@ import CategorySelect from '@/components/CategorySelect.vue'
 import Loader from '@/components/Loader.vue'
 import ErrorMessage from '@/components/ErrorMessage.vue'
 import { Button } from '@/ui/button'
+
 const {
   categories,
   selectedCategory,
@@ -80,7 +81,7 @@ watch(productLoadParams, debounce(params => {
         </div>
       </div>
       <!-- Убедитесь, что функция loadMoreProducts определена и работает корректно -->
-      <Button @click="() => loadProducts({ resetOffset: false })" class="mt-4" v-if="!isLoading && products.length">
+      <Button @click="() => loadProducts({title: searchQuery, categoryId: selectedCategory, resetOffset: false })" class="mt-4" v-if="!isLoading && products.length">
         Загрузить еще
       </Button>
     </div>
